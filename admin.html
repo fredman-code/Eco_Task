@@ -39,14 +39,14 @@
             </div>
         </div>
     </main>
+    <script src="firebase-config.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script>
-    // Use the same config as your main app
     const firebaseConfig = window.firebaseConfig || {
         apiKey: "AIzaSyCwx8U-E5XtIRcypJJ140pkr_m6HWQseXM",
         authDomain: "waterdispenser-481aa.firebaseapp.com",
-        databaseURL: "https://waterdispenser-481aa-default-rtdb.europe-west1.firebasedatabase.app",
         projectId: "waterdispenser-481aa",
         storageBucket: "waterdispenser-481aa.appspot.com",
         messagingSenderId: "277682505465",
@@ -54,67 +54,118 @@
         measurementId: "G-1EJ50VTXRR"
     };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const db = firebase.firestore();
 
-    function renderPending(list) {
+    // Use a collectionGroup query to find 'submissions' subcollections regardless of whether
+    // the parent docs under 'activities_pending' exist. Then filter by path to get only the
+    // pending submissions (those under activities_pending/{uid}/submissions).
+    async function fetchPending() {
         const container = document.getElementById('pending-list');
-        if (!list || Object.keys(list).length === 0) {
-            container.innerHTML = '<p class="text-gray-500">No pending submissions.</p>';
-            return;
-        }
-        container.innerHTML = '';
-        Object.entries(list).forEach(([id, item]) => {
-            const div = document.createElement('div');
-            div.className = 'mb-4 p-4 border rounded-lg bg-gray-50';
-            div.innerHTML = `
-                <div class="font-bold text-green-700">${item.username} (${item.school})</div>
-                <div class="text-gray-700">Activity: <span class="font-semibold">${item.activity}</span></div>
-                <div class="text-gray-500 mb-2">${item.description || ''}</div>
-                <button class="btn btn-approve mr-2" onclick="approveActivity('${id}')">Approve</button>
-                <button class="btn btn-reject" onclick="rejectActivity('${id}')">Reject</button>
-            `;
-            container.appendChild(div);
-        });
+        container.innerHTML = '<p class="text-gray-500">Loading...</p>';
+        try {
+            const items = [];
+            const subsSnap = await db.collectionGroup('submissions').get();
+            subsSnap.forEach(snap => {
+                const data = snap.data();
+                const ref = snap.ref; // DocumentReference
+                const fullPath = ref.path; // e.g. "activities_pending/{uid}/submissions/{docId}"
+                if (!fullPath.includes('activities_pending/')) return; // skip non-pending
+                const docId = ref.id;
+                // parent is the 'submissions' collection; parent.parent is the activities_pending/{uid} doc
+                const userDoc = ref.parent.parent;
+                const uid = userDoc ? userDoc.id : null;
+                data._docId = docId;
+                data._userId = uid;
+                items.push(data);
+            });
+
+            if (items.length === 0) { container.innerHTML = '<p class="text-gray-500">No pending submissions.</p>'; return; }
+            container.innerHTML = '';
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'mb-4 p-4 border rounded-lg bg-gray-50';
+                div.innerHTML = `
+                    <div class="font-bold text-green-700">${item.username || 'Unknown'} (${item.school || ''})</div>
+                    <div class="text-gray-700">Activity: <span class="font-semibold">${item.activity || ''}</span> — <span class="text-sm text-gray-500">${item.activityPoints || 0} pts</span></div>
+                    <div class="text-gray-500 mb-2">${item.description || ''}</div>
+                    ${item.photoData ? `<img src="${item.photoData}" class="mb-2 w-full rounded" />` : ''}
+                    <button class="btn btn-approve mr-2" onclick="approveActivity('${item._userId}','${item._docId}', ${item.activityPoints || 0})">Approve</button>
+                    <button class="btn btn-reject" onclick="rejectActivity('${item._userId}','${item._docId}')">Reject</button>
+                `;
+                container.appendChild(div);
+            });
+        } catch (err) { console.error(err); container.innerHTML = '<p class="text-red-500">Failed to load pending submissions</p>'; }
     }
-    function renderApproved(list) {
+
+    // Load approved submissions (from activities_approved/{uid}/submissions/{id})
+    async function fetchApproved() {
         const container = document.getElementById('approved-list');
-        if (!list || Object.keys(list).length === 0) {
-            container.innerHTML = '<p class="text-gray-500">No approved activities yet.</p>';
-            return;
-        }
-        container.innerHTML = '';
-        Object.entries(list).forEach(([id, item]) => {
-            const div = document.createElement('div');
-            div.className = 'mb-4 p-4 border rounded-lg bg-green-50';
-            div.innerHTML = `
-                <div class="font-bold text-green-700">${item.username} (${item.school})</div>
-                <div class="text-gray-700">Activity: <span class="font-semibold">${item.activity}</span></div>
-                <div class="text-gray-500 mb-2">${item.description || ''}</div>
-            `;
-            container.appendChild(div);
-        });
+        container.innerHTML = '<p class="text-gray-500">Loading...</p>';
+        try {
+            const items = [];
+            const subsSnap = await db.collectionGroup('submissions').get();
+            subsSnap.forEach(snap => {
+                const data = snap.data();
+                const ref = snap.ref;
+                const fullPath = ref.path;
+                if (!fullPath.includes('activities_approved/')) return;
+                const docId = ref.id;
+                const userDoc = ref.parent.parent;
+                const uid = userDoc ? userDoc.id : null;
+                data._docId = docId;
+                data._userId = uid;
+                items.push(data);
+            });
+
+            if (items.length === 0) { container.innerHTML = '<p class="text-gray-500">No approved submissions.</p>'; return; }
+            container.innerHTML = '';
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'mb-4 p-4 border rounded-lg bg-white';
+                div.innerHTML = `
+                    <div class="font-bold text-green-700">${item.username || 'Unknown'} (${item.school || ''})</div>
+                    <div class="text-gray-700">Activity: <span class="font-semibold">${item.activity || ''}</span> — <span class="text-sm text-gray-500">${item.activityPoints || 0} pts</span></div>
+                    <div class="text-gray-500 mb-2">${item.description || ''}</div>
+                    ${item.photoData ? `<img src="${item.photoData}" class="mb-2 w-full rounded" />` : ''}
+                `;
+                container.appendChild(div);
+            });
+        } catch (err) { console.error(err); container.innerHTML = '<p class="text-red-500">Failed to load approved submissions</p>'; }
     }
-    function approveActivity(id) {
-        db.ref('activities/pending/' + id).once('value').then(snapshot => {
-            const data = snapshot.val();
-            if (data) {
-                db.ref('activities/approved/' + id).set(data);
-                db.ref('activities/pending/' + id).remove();
-            }
-        });
+
+    async function approveActivity(userId, docId, points) {
+        try {
+            const subRef = db.collection('activities_pending').doc(userId).collection('submissions').doc(docId);
+            const snap = await subRef.get();
+            if (!snap.exists) return;
+            const data = snap.data();
+            // Move to approved collection
+            const approvedRef = db.collection('activities_approved').doc(userId).collection('submissions');
+            await approvedRef.doc(docId).set(data);
+            // Remove pending
+            await subRef.delete();
+            // Increment user points atomically
+            const userRef = db.collection('users').doc(userId);
+            await db.runTransaction(async (tx) => {
+                const u = await tx.get(userRef);
+                const current = (u.exists && u.data().points) ? u.data().points : 0;
+                tx.set(userRef, { points: current + (points || 0) }, { merge: true });
+            });
+            fetchPending();
+            alert('Approved and points awarded');
+        } catch (err) { console.error(err); alert('Approve failed: ' + (err.message || err)); }
     }
-    function rejectActivity(id) {
-        db.ref('activities/pending/' + id).remove();
+
+    async function rejectActivity(userId, docId) {
+        try {
+            const subRef = db.collection('activities_pending').doc(userId).collection('submissions').doc(docId);
+            await subRef.delete();
+            fetchPending();
+            alert('Rejected');
+        } catch (err) { console.error(err); alert('Reject failed: ' + (err.message || err)); }
     }
-    function fetchActivities() {
-        db.ref('activities/pending').on('value', snapshot => {
-            renderPending(snapshot.val());
-        });
-        db.ref('activities/approved').on('value', snapshot => {
-            renderApproved(snapshot.val());
-        });
-    }
-    fetchActivities();
+
+    fetchPending();
     </script>
 </body>
 </html>
