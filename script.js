@@ -26,17 +26,8 @@ const state = {
         { name: 'E-waste collection', description: 'Gather and submit e-waste safely', points: 4 }
     ],
     leaderboards: {
-        school: [
-            { name: 'Alex Johnson', school: 'Delhi Private School, Sharjah', points: 98, rank: 1 },
-            { name: 'Samira Ahmed', school: 'Delhi Private School, Sharjah', points: 87, rank: 2 },
-            { name: 'David Wilson', school: 'Delhi Private School, Sharjah', points: 76, rank: 3 },
-            { name: 'You', school: 'Delhi Private School, Sharjah', points: 12, rank: 7 }
-        ],
-        uae: [
-            { name: 'Fatima Al Mansoori', school: 'GEMS Wellington Academy', points: 127, rank: 1 },
-            { name: 'Mohammed Khan', school: 'DPS Dubai', points: 118, rank: 2 },
-            { name: 'Priya Patel', school: 'International Indian High School', points: 105, rank: 3 }
-        ]
+        school: [],
+        uae: []
     },
     badges: [
         { id: 'bronze-leaf', name: 'Bronze Leaf', pointsRequired: 10, description: 'Earned for reaching 10 points' },
@@ -165,18 +156,84 @@ function initializeFirebase() {
     try {
         firebaseApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(config);
         firebaseAuth = firebase.auth();
+        // Load database SDK dynamically (Firebase v8 style)
+        if (typeof firebase.database === 'undefined') {
+            const dbScript = document.createElement('script');
+            dbScript.src = 'https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js';
+            dbScript.onload = () => {
+                console.log('Firebase database SDK loaded');
+            };
+            document.head.appendChild(dbScript);
+        }
         firebaseInitialized = true;
 
         firebaseAuth.onAuthStateChanged((firebaseUser) => {
             if (firebaseUser) {
                 const profile = buildUserProfileFromFirebase(firebaseUser);
-                loginUser(profile);
+                // write profile to DB and then login
+                writeUserProfileToDB(profile).then(() => loginUser(profile));
             } else {
                 logoutUser(true);
             }
         });
     } catch (error) {
         console.error('Failed to initialize Firebase:', error);
+    }
+}
+
+function writeUserProfileToDB(profile) {
+    return new Promise((resolve) => {
+        if (typeof firebase === 'undefined' || typeof firebase.database === 'undefined') return resolve();
+        const db = firebase.database();
+        const data = {
+            name: profile.name,
+            email: profile.email,
+            school: profile.school,
+            points: profile.points || 0,
+            badges: profile.badges || []
+        };
+        if (profile.uid) {
+            db.ref('users/' + profile.uid).set(data, () => resolve());
+        } else {
+            resolve();
+        }
+    });
+}
+
+function fetchLeaderboards() {
+    if (typeof firebase === 'undefined' || typeof firebase.database === 'undefined') return;
+    const db = firebase.database();
+    db.ref('users').once('value').then(snapshot => {
+        const users = snapshot.val() || {};
+        const arr = Object.values(users);
+        arr.sort((a, b) => (b.points || 0) - (a.points || 0));
+        state.leaderboards.uae = arr.map((u, i) => ({ name: u.name, school: u.school, points: u.points || 0, rank: i + 1 }));
+        state.leaderboards.school = arr.filter(u => u.school === (state.user && state.user.school)).map((u, i) => ({ name: u.name, school: u.school, points: u.points || 0, rank: i + 1 }));
+        renderLeaderboards();
+    });
+}
+
+function renderLeaderboards() {
+    // Simple rendering: replace leaderboard containers with generated items
+    const schoolContainer = document.querySelector('#school-leaderboard .list');
+    const uaeContainer = document.querySelector('#uae-leaderboard .list');
+    if (schoolContainer) {
+        schoolContainer.innerHTML = '';
+        state.leaderboards.school.slice(0, 10).forEach(item => {
+            const el = document.createElement('div');
+            el.className = 'bg-white p-3 rounded-lg flex items-center border';
+            el.innerHTML = `<div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3"><span class="text-gray-800 font-bold">${item.rank}</span></div><div class="flex-1 min-w-0"><p class="font-medium truncate">${item.name}</p><p class="text-xs text-gray-500">${item.points} points</p></div>`;
+            schoolContainer.appendChild(el);
+        });
+    }
+    if (uaeContainer) {
+        uaeContainer.innerHTML = '';
+        state.leaderboards.uae.slice(0, 10).forEach(item => {
+            const el = document.createElement('div');
+            el.className = 'bg-white p-3 rounded-lg flex items-center border';
+            el.innerHTML = `<div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3"><span class="text-gray-800 font-bold">${item.rank}</span></div><div class="flex-1 min-w-0"><p class="font-medium truncate">${item.name}</p><p class="text-xs text-gray-500">${item.school} — ${item.points} pts</p></div>`;
+            uaeContainer.appendChild(el);
+        });
     }
 }
 
@@ -237,6 +294,15 @@ function setupEventListeners() {
     // Form submissions
     document.getElementById('login-form-el').addEventListener('submit', handleLogin);
     document.getElementById('signup-form-el').addEventListener('submit', handleSignup);
+    // Proof modal triggers
+    const submitProofBtnEl = document.getElementById('submit-proof-btn');
+    if (submitProofBtnEl) submitProofBtnEl.addEventListener('click', () => {
+        populateActivitySelect();
+        proofModal.classList.remove('hidden');
+    });
+    const cancelProofBtn = document.getElementById('cancel-proof');
+    if (cancelProofBtn) cancelProofBtn.addEventListener('click', () => proofModal.classList.add('hidden'));
+    if (proofForm) proofForm.addEventListener('submit', handleProofSubmission);
 }
 
 function showLoginForm() {
@@ -494,7 +560,22 @@ function loginUser(user) {
     window.scrollTo(0, 0);
 
     // Hide about section as we're logged in
-    aboutSection.classList.add('hidden');
+    if (aboutSection) aboutSection.classList.add('hidden');
+
+    // Fetch leaderboards and render
+    fetchLeaderboards();
+}
+
+function populateActivitySelect() {
+    const select = document.getElementById('activity-select');
+    if (!select) return;
+    select.innerHTML = '<option value="" disabled selected>Select an activity</option>';
+    state.activities.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.name;
+        opt.textContent = `${a.name} (${a.points} pts)`;
+        select.appendChild(opt);
+    });
 }
 
 function logoutUser(triggeredByFirebase = false) {
@@ -565,42 +646,40 @@ function handleProofSubmission(e) {
     const activity = document.getElementById('activity-select').value;
     const description = document.getElementById('proof-description').value;
 
-    if (!activity || !proofPhoto.files[0]) {
-        alert('Please select an activity and upload a photo');
+    if (!activity) {
+        alert('Please select an activity');
         return;
     }
 
-    // In a real app, we would:
-    // 1. Verify the face in the proof photo matches the stored face data
-    // 2. Send the submission to the server for processing and verification
-    // 3. Update the UI when verification is complete
+    // Push submission to Firebase pending queue
+    if (typeof firebase !== 'undefined' && typeof firebase.database !== 'undefined') {
+        const db = firebase.database();
+        const submission = {
+            userId: state.user && state.user.uid ? state.user.uid : null,
+            username: state.user ? state.user.name : 'Anonymous',
+            school: state.user ? state.user.school : 'Unknown',
+            activity,
+            description: description || '',
+            timestamp: Date.now(),
+            status: 'pending'
+        };
+        db.ref('activities/pending').push(submission, err => {
+            if (err) {
+                alert('Failed to submit activity proof. Please try again.');
+            } else {
+                alert('Submitted activity for admin review.');
+                proofModal.classList.add('hidden');
+                resetProofForm();
+            }
+        });
+        return;
+    }
 
-    // For demo purposes, simulate verification and point award
-    setTimeout(() => {
-        alert('Verification complete! Face match confirmed. Points awarded.');
-
-        // Award points (find activity in the list)
-        const activityData = state.activities.find(a => a.name === activity);
-        if (activityData) {
-            state.user.points += activityData.points;
-
-            // Check for new badges
-            state.badges.forEach(badge => {
-                if (state.user.points >= badge.pointsRequired && !state.user.badges.includes(badge.id)) {
-                    state.user.badges.push(badge.id);
-                    alert(`Congratulations! You earned the ${badge.name} badge!`);
-                }
-            });
-
-            // Update stored user
-            persistCurrentUserProfile();
-
-            // Update UI
-            updateUserProfile();
-
-            // Close modal
-            proofModal.classList.add('hidden');
-            resetProofForm();
-        }
-    }, 1500);
+    // Fallback: store locally
+    let local = JSON.parse(localStorage.getItem('ecoSparkPending') || '[]');
+    local.push({ user: state.user, activity, description, timestamp: Date.now(), status: 'pending' });
+    localStorage.setItem('ecoSparkPending', JSON.stringify(local));
+    alert('Submitted activity for admin review (local).');
+    proofModal.classList.add('hidden');
+    resetProofForm();
 }

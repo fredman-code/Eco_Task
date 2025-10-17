@@ -210,7 +210,7 @@
                     <div class="card p-6">
                         <h2 class="text-xl font-bold mb-6">Leaderboards</h2>
                         <!-- School Leaderboard -->
-                        <div class="mb-8">
+                        <div class="mb-8" id="school-leaderboard">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="font-medium">Your School</h3>
                                 <div class="relative">
@@ -230,83 +230,15 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="space-y-2">
-                                <!-- ...school leaderboard cards... -->
-                                <div class="bg-blue-50 p-3 rounded-lg flex items-center">
-                                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                                        <span class="text-blue-800 font-bold">1</span>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="font-medium truncate">Alex Johnson</p>
-                                        <p class="text-xs text-gray-500">98 points</p>
-                                    </div>
-                                    <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/b4c890b0-6a2b-4e23-9b26-c80d83c08575.png" alt="Gold medal icon for first place" class="h-6 w-6 ml-2">
-                                </div>
-                                <div class="bg-white p-3 rounded-lg flex items-center border">
-                                    <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-                                        <span class="text-gray-800 font-bold">2</span>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="font-medium truncate">Samira Ahmed</p>
-                                        <p class="text-xs text-gray-500">87 points</p>
-                                    </div>
-                                    <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/7e793c9c-8f15-4ae9-bf86-0cae0b5b74bb.png" alt="Silver medal icon for second place" class="h-6 w-6 ml-2">
-                                </div>
-                                <div class="bg-white p-3 rounded-lg flex items-center border">
-                                    <div class="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center mr-3">
-                                        <span class="text-yellow-800 font-bold">3</span>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="font-medium truncate">David Wilson</p>
-                                        <p class="text-xs text-gray-500">76 points</p>
-                                    </div>
-                                    <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/ac668225-a874-40ab-a3b6-10c311e7a352.png" alt="Bronze medal icon for third place" class="h-6 w-6 ml-2">
-                                </div>
-                                <div class="bg-white p-3 rounded-lg flex items-center border">
-                                    <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-                                        <span class="text-gray-800 font-bold">7</span>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="font-medium truncate">You</p>
-                                        <p class="text-xs text-gray-500">12 points</p>
-                                    </div>
-                                </div>
+                            <div class="space-y-2 list">
+                                <!-- dynamic school leaderboard will be rendered here -->
                             </div>
                         </div>
                         <!-- UAE Leaderboard -->
-                        <div class="mb-4">
+                        <div class="mb-4" id="uae-leaderboard">
                             <h3 class="font-medium mb-3">UAE Top Performers</h3>
-                            <div class="space-y-2">
-                                <div class="bg-gradient-to-r from-green-500 to-blue-500 p-3 rounded-lg flex items-center">
-                                    <div class="w-8 h-8 rounded-full bg-white bg-opacity-30 flex items-center justify-center mr-3">
-                                        <span class="text-white font-bold">1</span>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="font-medium text-white truncate">Fatima Al Mansoori</p>
-                                        <p class="text-xs text-white text-opacity-80">127 points (GEMS)</p>
-                                    </div>
-                                    <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/bb5acefd-0d9a-4233-8721-7101b8b62dbe.png" alt="Gold medal with UAE flag design" class="h-6 w-6 ml-2">
-                                </div>
-                                <div class="bg-gray-50 p-3 rounded-lg flex items-center">
-                                    <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                                        <span class="text-gray-800 font-bold">2</span>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="font-medium truncate">Mohammed Khan</p>
-                                        <p class="text-xs text-gray-500">118 points (DPS Dubai)</p>
-                                    </div>
-                                    <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/91d0c679-827e-4efb-9b57-764b86084811.png" alt="Silver medal with UAE flag design" class="h-6 w-6 ml-2">
-                                </div>
-                                <div class="bg-white p-3 rounded-lg flex items-center border">
-                                    <div class="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center mr-3">
-                                        <span class="text-yellow-800 font-bold">3</span>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="font-medium truncate">Priya Patel</p>
-                                        <p class="text-xs text-gray-500">105 points (IHS Sharjah)</p>
-                                    </div>
-                                    <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/2cb68790-089b-4652-8deb-606a5d92cf35.png" alt="Bronze medal with UAE flag design" class="h-6 w-6 ml-2">
-                                </div>
+                            <div class="space-y-2 list">
+                                <!-- dynamic uae leaderboard will be rendered here -->
                             </div>
                         </div>
                         <button class="mt-4 w-full py-2 text-center text-sm text-green-600 font-medium hover:underline">View All Rankings</button>
@@ -314,7 +246,29 @@
                 </section>
             </div>
             <!-- Submit Proof Modal -->
-            <!-- Proof modal removed: no photo/camera/capture required -->
+            <div id="proof-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl w-full max-w-md overflow-hidden">
+                    <div class="p-6">
+                        <h2 class="text-xl font-bold mb-4">Submit Activity Proof</h2>
+                        <form id="proof-form">
+                            <div class="mb-4">
+                                <label for="activity-select" class="block text-sm font-medium text-gray-700 mb-1">Activity</label>
+                                <select id="activity-select" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                                    <option value="" disabled selected>Select an activity</option>
+                                </select>
+                            </div>
+                            <div class="mb-4">
+                                <label for="proof-description" class="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                                <textarea id="proof-description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Tell us about your activity..."></textarea>
+                            </div>
+                            <div class="flex justify-end gap-3">
+                                <button type="button" id="cancel-proof" class="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition">Cancel</button>
+                                <button type="submit" id="submit-proof" class="px-4 py-2 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 transition">Submit for Review</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
     <!-- Footer (same as index.html) -->
