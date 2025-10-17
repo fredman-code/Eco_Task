@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoSpark Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #F3F4F6; }
+        .card { background: white; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .card-header { font-weight: bold; font-size: 1.25rem; margin-bottom: 1rem; }
+        .btn { padding: 0.5rem 1rem; border-radius: 8px; font-weight: 500; }
+        .btn-approve { background: #10B981; color: white; }
+        .btn-reject { background: #EF4444; color: white; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <nav class="bg-white shadow-sm mb-8">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/ee51b11f-36a8-44ef-85a7-28b1a976cf5b.png" alt="EcoSpark logo" class="h-8 w-8">
+                <span class="ml-2 text-xl font-bold text-green-600">EcoSpark Admin</span>
+            </div>
+            <a href="index.html" class="px-4 py-2 rounded-md text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition">Home</a>
+        </div>
+    </nav>
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        <div class="card p-6 mb-8">
+            <div class="card-header">Pending Activity Submissions</div>
+            <div id="pending-list">
+                <p class="text-gray-500">Loading...</p>
+            </div>
+        </div>
+        <div class="card p-6">
+            <div class="card-header">Approved Activities</div>
+            <div id="approved-list">
+                <p class="text-gray-500">Loading...</p>
+            </div>
+        </div>
+    </main>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script>
+    // Use the same config as your main app
+    const firebaseConfig = window.firebaseConfig || {
+        apiKey: "AIzaSyCwx8U-E5XtIRcypJJ140pkr_m6HWQseXM",
+        authDomain: "waterdispenser-481aa.firebaseapp.com",
+        databaseURL: "https://waterdispenser-481aa-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "waterdispenser-481aa",
+        storageBucket: "waterdispenser-481aa.appspot.com",
+        messagingSenderId: "277682505465",
+        appId: "1:277682505465:web:0a69d843263ba2746ec428",
+        measurementId: "G-1EJ50VTXRR"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function renderPending(list) {
+        const container = document.getElementById('pending-list');
+        if (!list || Object.keys(list).length === 0) {
+            container.innerHTML = '<p class="text-gray-500">No pending submissions.</p>';
+            return;
+        }
+        container.innerHTML = '';
+        Object.entries(list).forEach(([id, item]) => {
+            const div = document.createElement('div');
+            div.className = 'mb-4 p-4 border rounded-lg bg-gray-50';
+            div.innerHTML = `
+                <div class="font-bold text-green-700">${item.username} (${item.school})</div>
+                <div class="text-gray-700">Activity: <span class="font-semibold">${item.activity}</span></div>
+                <div class="text-gray-500 mb-2">${item.description || ''}</div>
+                <button class="btn btn-approve mr-2" onclick="approveActivity('${id}')">Approve</button>
+                <button class="btn btn-reject" onclick="rejectActivity('${id}')">Reject</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+    function renderApproved(list) {
+        const container = document.getElementById('approved-list');
+        if (!list || Object.keys(list).length === 0) {
+            container.innerHTML = '<p class="text-gray-500">No approved activities yet.</p>';
+            return;
+        }
+        container.innerHTML = '';
+        Object.entries(list).forEach(([id, item]) => {
+            const div = document.createElement('div');
+            div.className = 'mb-4 p-4 border rounded-lg bg-green-50';
+            div.innerHTML = `
+                <div class="font-bold text-green-700">${item.username} (${item.school})</div>
+                <div class="text-gray-700">Activity: <span class="font-semibold">${item.activity}</span></div>
+                <div class="text-gray-500 mb-2">${item.description || ''}</div>
+            `;
+            container.appendChild(div);
+        });
+    }
+    function approveActivity(id) {
+        db.ref('activities/pending/' + id).once('value').then(snapshot => {
+            const data = snapshot.val();
+            if (data) {
+                db.ref('activities/approved/' + id).set(data);
+                db.ref('activities/pending/' + id).remove();
+            }
+        });
+    }
+    function rejectActivity(id) {
+        db.ref('activities/pending/' + id).remove();
+    }
+    function fetchActivities() {
+        db.ref('activities/pending').on('value', snapshot => {
+            renderPending(snapshot.val());
+        });
+        db.ref('activities/approved').on('value', snapshot => {
+            renderApproved(snapshot.val());
+        });
+    }
+    fetchActivities();
+    </script>
+</body>
+</html>
